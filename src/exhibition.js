@@ -636,12 +636,18 @@ export function createExhibition() {
   }
 
   // ═══════════════════════════════════
-  //  10. 出生点
+  //  10. 墙面内容展板 — 直接显示展览图文
+  // ═══════════════════════════════════
+
+  _addWallPanels(scene, collidables, POS, { HALL_W, HALL_D, PEOPLE_D });
+
+  // ═══════════════════════════════════
+  //  11. 出生点
   // ═══════════════════════════════════
 
   const spawn = {
-    position: new THREE.Vector3(lx, 1.6, lz + LOBBY_D / 2 - 1.5),
-    lookAt: new THREE.Vector3(0, 1.4, 0), // 面朝中央大厅方向
+    position: new THREE.Vector3(lx, 1.35, lz + LOBBY_D / 2 - 1.5),
+    lookAt: new THREE.Vector3(0, 1.2, 0),
   };
 
   // ═══════════════════════════════════
@@ -1001,6 +1007,181 @@ function _buildHongqiquUnit(scene, coll, ux, uz) {
  * @param {string} line2 — 第二行（可选）
  * @returns {THREE.Sprite}
  */
+/**
+ * 在展厅墙面生成图文展板（Canvas 纹理 + Plane）
+ */
+function _addWallPanels(scene, coll, POS, SIZES) {
+  const [px, pz] = POS.peopleHall;
+  const [lx, lz] = POS.lobby;
+  const { HALL_W, HALL_D, PEOPLE_D } = SIZES;
+  const zx = POS.zzuHall[0], zz = POS.zzuHall[1];
+  const rx = POS.ruleHall[0], rz = POS.ruleHall[1];
+  const fx = POS.futureHall[0], fz = POS.futureHall[1];
+
+  // ── 人物馆南墙（从序厅进来的右侧）：焦裕禄大展板 ──
+  _createContentPanel(scene, coll,
+    px - 5.5, 2.5, pz + PEOPLE_D / 2 - 0.6,
+    0,            // 朝向北（从墙面向展厅内）
+    '焦桐常青  丰碑永驻',
+    '焦裕禄 · 人民公仆的廉洁实践',
+    '制定"干部十不准" | 拒看白戏 | 退还救济款\n\n1962年冬来到兰考任县委书记，面对内涝、风沙、盐碱三大灾害，带领人民艰苦奋斗。心中装着全体人民，唯独没有他自己。\n\n"活着我没有治好沙丘，死了也要看着你们把沙丘治好"',
+    4.5, 3.0,
+  );
+
+  // ── 人物馆南墙（从序厅进来的左侧）：红旗渠展板 ──
+  _createContentPanel(scene, coll,
+    px + 5.5, 2.5, pz + PEOPLE_D / 2 - 0.6,
+    0,
+    '红旗渠精神',
+    '太行山上的廉洁丰碑',
+    '自力更生 | 艰苦创业 | 团结协作 | 无私奉献\n\n河南林县人民在太行山悬崖峭壁上开凿的"人工天河"——红旗渠。全长1500公里，削平1250个山头，架设151座渡槽。\n\n每一块石头都是廉洁的见证，每一滴水都是奋斗的结晶。',
+    4.5, 3.0,
+  );
+
+  // ── 人物馆东墙：焦裕禄干部十不准 ──
+  _createContentPanel(scene, coll,
+    px + HALL_W / 2 - 0.6, 2.2, pz,
+    Math.PI / 2,
+    '焦裕禄 · 干部十不准',
+    '廉洁奉公的行为准则',
+    '1.不准用国家或集体的粮款大吃大喝\n2.不准请客送礼\n3.不准挥霍浪费\n4.不准用公款组织晚会\n5.不准送戏票\n6.县社电影队不准收费\n7.不准到商业部门索取物资\n8.不准贱卖或私分国家物资\n9.不准借婚丧嫁娶之机大操大办\n10.不准参与封建迷信和赌博活动',
+    3.5, 3.2,
+  );
+
+  // ── 人物馆西墙：王荷波纪律先驱 ──
+  _createContentPanel(scene, coll,
+    px - HALL_W / 2 + 0.6, 2.5, pz,
+    -Math.PI / 2,
+    '品重柱石  信仰铸魂',
+    '王荷波 · 党的纪律建设先驱',
+    '中国共产党早期领导人\n中央监察委员会首任主席\n\n"请求党组织对我的子女加强革命教育，\n千万别走和我相反的道路。"\n——王荷波临刑前遗言',
+    3.5, 2.6,
+  );
+
+  // ── 中央大厅东墙：郑大校史展板 ──
+  _createContentPanel(scene, coll,
+    zx - HALL_W / 2 + 0.6, 2.0, zz,
+    Math.PI / 2,
+    '艰苦创业立校  清白治学育人',
+    '嵇文甫 · 郑州大学首任校长',
+    '1956年建校，从荒滩到一流大学\n首任校长嵇文甫以德立身、以学立言\n\n廉洁基因代代相传\n"为人民服务，是学者的天职"',
+    3.5, 2.5,
+  );
+
+  // ── 中央大厅西墙：三大纪律展板 ──
+  _createContentPanel(scene, coll,
+    rx + HALL_W / 2 - 0.6, 2.0, rz,
+    -Math.PI / 2,
+    '纪律如铁  信仰铸魂',
+    '三大纪律 · 八项注意',
+    '三大纪律：\n一切行动听指挥\n不拿群众一针一线\n一切缴获要归公\n\n铁的纪律铸就了人民军队的本色\n纪律是党的生命线',
+    3.5, 2.8,
+  );
+
+  // ── 中央大厅北墙：张人亚展板 ──
+  _createContentPanel(scene, coll,
+    fx, 2.2, fz + HALL_D / 2 - 0.6,
+    0,
+    '文献无声  廉脉永续',
+    '张人亚 · 党章守护者',
+    '"这些文件比我的生命还重要"\n\n1927年大革命失败后，将党的珍贵文献\n托付父亲张爵谦藏于衣冠冢\n守护二十余年，直到新中国成立\n\n用生命守护红色档案\n用初心见证纪律记忆',
+    4.0, 2.8,
+  );
+}
+
+/**
+ * 创建一个墙上内容展板
+ * @param {THREE.Scene} scene
+ * @param {Array} coll
+ * @param {number} x, y, z — 位置
+ * @param {number} rotY — 绕Y轴旋转（朝向东=π/2, 朝向西=-π/2, 朝向北=0, 朝向南=π）
+ * @param {string} title — 大标题
+ * @param {string} subtitle — 副标题
+ * @param {string} body — 正文
+ * @param {number} w — 展板宽度(m)
+ * @param {number} h — 展板高度(m)
+ */
+function _createContentPanel(scene, coll, x, y, z, rotY, title, subtitle, body, w, h) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 1024;
+  canvas.height = Math.round(1024 * h / w);
+  const ctx = canvas.getContext('2d');
+
+  // 深色背景
+  ctx.fillStyle = '#1a1220';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // 红色顶部装饰条
+  ctx.fillStyle = '#8b1a1a';
+  ctx.fillRect(0, 0, canvas.width, 8);
+
+  // 金色边框
+  ctx.strokeStyle = '#c9a96e';
+  ctx.lineWidth = 4;
+  ctx.strokeRect(8, 8, canvas.width - 16, canvas.height - 16);
+
+  // 内细线
+  ctx.strokeStyle = 'rgba(201,169,110,0.3)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
+
+  // 标题
+  ctx.fillStyle = '#e8d5b0';
+  ctx.font = 'bold 56px "Microsoft YaHei","PingFang SC",sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillText(title, canvas.width / 2, 36);
+
+  // 分隔线
+  ctx.strokeStyle = 'rgba(201,169,110,0.4)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(canvas.width * 0.2, 108);
+  ctx.lineTo(canvas.width * 0.8, 108);
+  ctx.stroke();
+
+  // 副标题
+  ctx.fillStyle = '#c9a96e';
+  ctx.font = '36px "Microsoft YaHei","PingFang SC",sans-serif';
+  ctx.fillText(subtitle, canvas.width / 2, 120);
+
+  // 正文（多行）
+  ctx.fillStyle = '#b0a090';
+  ctx.font = '28px "Microsoft YaHei","PingFang SC",sans-serif';
+  ctx.textAlign = 'left';
+  const lines = body.split('\n');
+  let ly = 180;
+  for (const line of lines) {
+    if (line === '') { ly += 16; continue; }
+    ctx.fillText(line, 50, ly);
+    ly += 40;
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.colorSpace = THREE.SRGBColorSpace;
+
+  const panelGeo = new THREE.PlaneGeometry(w, h);
+  const panelMat = new THREE.MeshBasicMaterial({ map: texture });
+  const panel = new THREE.Mesh(panelGeo, panelMat);
+  panel.position.set(x, y, z);
+  panel.rotation.y = rotY;
+  panel.name = `面板-${title}`;
+  scene.add(panel);
+
+  // 金属边框
+  const frameGeo = new THREE.BoxGeometry(w + 0.12, h + 0.12, 0.06);
+  const frame = new THREE.Mesh(frameGeo, matGold.clone());
+  frame.position.copy(panel.position);
+  frame.rotation.y = rotY;
+  frame.position.z += (rotY === 0 || rotY === Math.PI) ? -0.04 : 0;
+  frame.position.x += (rotY === Math.PI / 2 || rotY === -Math.PI / 2) ? (rotY > 0 ? -0.04 : 0.04) : 0;
+  frame.name = `面板框-${title}`;
+  scene.add(frame);
+  coll.push(frame);
+}
+
 function makeTextSprite(line1, line2) {
   const w = 1024, h = line2 ? 320 : 200;
   const canvas = document.createElement('canvas');

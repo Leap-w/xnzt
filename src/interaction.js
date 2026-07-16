@@ -182,7 +182,7 @@ export class InteractionManager {
       } else {
         this.hoveredExhibitId = null;
         this.hoveredMesh = null;
-        document.body.style.cursor = this.isPointerLocked ? 'none' : 'default';
+        document.body.style.cursor = 'default';
       }
     }
 

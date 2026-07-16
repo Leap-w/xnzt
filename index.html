@@ -209,12 +209,39 @@
     }
 
     /* ═══════════════════════════════════
+       准星（始终可见）
+       ═══════════════════════════════════ */
+    #crosshair {
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 24px; height: 24px;
+      z-index: 55; pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    #crosshair::before, #crosshair::after {
+      content: '';
+      position: absolute;
+      background: rgba(201,169,110,0.7);
+    }
+    #crosshair::before {
+      top: 10px; left: 0;
+      width: 24px; height: 2px;
+    }
+    #crosshair::after {
+      left: 11px; top: 0;
+      width: 2px; height: 24px;
+    }
+    #crosshair.visible { opacity: 1; }
+
+    /* ═══════════════════════════════════
        锁定提示
        ═══════════════════════════════════ */
     #lock-hint {
       position: fixed; top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      color: #fff; font-size: 0.95rem;
+      transform: translate(-50%, 50%);
+      color: #fff; font-size: 0.9rem;
       background: rgba(0,0,0,0.7);
       padding: 12px 28px; border-radius: 8px;
       z-index: 50; pointer-events: none;
@@ -412,6 +439,7 @@
     <span id="audio-icon">🔊</span>
   </div>
   <div id="fps">-- FPS</div>
+  <div id="crosshair"></div>
   <div id="lock-hint">🖱️ 点击画面开始漫游</div>
   <div id="control-hint">
     <div class="key-row"><span class="key">W A S D</span> 移动</div>

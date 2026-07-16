@@ -35,6 +35,7 @@ const loadError = document.getElementById('load-error');
 const loadRetry = document.getElementById('load-retry');
 const fpsEl = document.getElementById('fps');
 const lockHint = document.getElementById('lock-hint');
+const crosshair = document.getElementById('crosshair');
 const audioIcon = document.getElementById('audio-icon');
 const controlHint = document.getElementById('control-hint');
 
@@ -90,6 +91,7 @@ const BUILDING_BOUNDS = {
 
 const camera = createCamera();
 camera.position.copy(spawn.position);
+camera.position.y = 1.35;  // 降低视野高度
 camera.lookAt(spawn.lookAt);
 
 // ═══════════════════════════════════════
@@ -139,7 +141,7 @@ interaction.setIdLookup((mesh) => exhibitsMgr.getIdFromMesh(mesh));
 
 interaction.onExhibitHover = () => { document.body.style.cursor = 'pointer'; };
 interaction.onExhibitUnhover = () => {
-  document.body.style.cursor = document.pointerLockElement ? 'none' : 'default';
+  document.body.style.cursor = 'default';
 };
 
 interaction.onExhibitClick = (exhibitId) => {
@@ -207,9 +209,13 @@ window.__exhibition = state;
 // ═══════════════════════════════════════
 
 document.addEventListener('pointerlockchange', () => {
-  if (document.pointerLockElement && lockHint) {
-    lockHint.style.opacity = '0';
-    setTimeout(() => { if (lockHint) lockHint.remove(); }, 400);
+  const locked = !!document.pointerLockElement;
+  if (locked) {
+    if (lockHint) { lockHint.style.opacity = '0'; setTimeout(() => { if (lockHint) lockHint.remove(); }, 400); }
+    if (crosshair) crosshair.classList.add('visible');
+    document.body.style.cursor = 'default';
+  } else {
+    if (crosshair) crosshair.classList.remove('visible');
   }
 });
 
