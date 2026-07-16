@@ -20,19 +20,18 @@ import * as THREE from 'three';
 const HALL_W = 14;       // 展厅宽度 (X)
 const HALL_D = 12;       // 展厅深度 (Z)
 const HALL_H = 6;        // 展厅净高
+const PEOPLE_D = 18;     // 人物馆深度（V2.0 一厅三展区）
 const CENTER_W = 12;     // 中央大厅边长
 const CENTER_H = 7;      // 中央大厅挑高
 const LOBBY_W = 12;      // 序厅宽度
 const LOBBY_D = 10;      // 序厅深度
 const CORRIDOR_W = 5;    // 走廊宽度
-const CORRIDOR_L = 4;    // 走廊长度
 const WALL_T = 0.4;      // 墙体厚度
-const HALF_WT = WALL_T / 2;
 
-// 展区中心坐标 (X, Z)
+// 展区中心坐标 (X, Z) — V2.0 环形动线
 const POS = {
   lobby:       [0, 19],
-  peopleHall:  [0, 5],
+  peopleHall:  [0, 8],
   centralHall: [0, 0],
   futureHall:  [0, -15],
   ruleHall:    [-16, 0],
@@ -42,7 +41,7 @@ const POS = {
 // 建筑包围盒
 const BUILDING = {
   xMin: -23, xMax: 23,
-  zMin: -22, zMax: 24,
+  zMin: -24, zMax: 27,
 };
 
 // ═══════════════════════════════════════
@@ -289,14 +288,178 @@ export function createExhibition() {
   ]);
 
   // ═══════════════════════════════════
-  //  3b. 人物·中原丰碑
+  //  3b. 人物·中原丰碑 — V2.0 一厅三展区
   // ═══════════════════════════════════
+  //  布局：
+  //   ┌─────────────────┐
+  //   │  Zone 1: 精神序厅 │← 南入口（从序厅来）
+  //   │  中原精神之树     │
+  //   ├─────────────────┤
+  //   │  Zone 2: 人物展区 │
+  //   │  焦裕禄 | 红旗渠  │
+  //   ├─────────────────┤
+  //   │  Zone 3: 传承展区 │
+  //   │  精神传承互动墙   │← 北出口（通往中央大厅）
+  //   └─────────────────┘
 
   const [px, pz] = POS.peopleHall;
-  halls.peopleHall = buildHall(px, pz, HALL_W, HALL_D, HALL_H, 'PeopleHall', [
-    { side: 's', gap: 0, gapW: 4 },   // 从序厅进入
-    { side: 'n', gap: 0, gapW: 4 },   // 通往中央大厅
+  const pHalfW = HALL_W / 2;
+  const pHalfD = PEOPLE_D / 2;  // 9m
+
+  // 外围墙体（南墙开门→序厅，北墙开门→中央大厅）
+  halls.peopleHall = buildHall(px, pz, HALL_W, PEOPLE_D, HALL_H, 'PeopleHall', [
+    { side: 's', gap: 0, gapW: 4 },
+    { side: 'n', gap: 0, gapW: 4 },
   ]);
+
+  // ── 内部分隔墙（两道横墙，各有 3m 门洞）──
+  function addDividerWall(dz, label) {
+    const halfSeg = (HALL_W - 3) / 2;  // 3m 中央门洞
+    const y = HALL_H / 2;
+    if (halfSeg > 0.5) {
+      addBox(scene, collidables, halfSeg, HALL_H, WALL_T, px - halfSeg / 2 - 1.5, y, pz + dz, matWallInner, `分隔墙-${label}-L`);
+      addBox(scene, collidables, halfSeg, HALL_H, WALL_T, px + halfSeg / 2 + 1.5, y, pz + dz, matWallInner, `分隔墙-${label}-R`);
+    }
+  }
+
+  // Zone 1｜2 分隔：pz + pHalfD - 6 = pz + 3  (Zone1 深6m)
+  // Zone 2｜3 分隔：pz - pHalfD + 6 = pz - 3  (Zone3 深6m)
+  addDividerWall(pH - 3, 'Z1Z2');
+  // Zone 2 is the middle, Zone 3 is at north end
+  // Actually let me recalculate:
+  // Zone 1: pz + pHalfD to pz + pHalfD - 6 → Z1 south wall at pz+9, Z1 north wall at pz+3
+  // Zone 2: pz + 3 to pz - 3 (middle 6m)
+  // Zone 3: pz - 3 to pz - pHalfD → Z3 south wall at pz-3, Z3 north wall at pz-9
+  // Divider 1 at pz+3 (between Z1/Z2)
+  // Divider 2 at pz-3 (between Z2/Z3)
+
+  // Divider at pz+3 (between Zone 1 and Zone 2)
+  addDividerWall(3, 'Z1Z2');
+  // Divider at pz-3 (between Zone 2 and Zone 3)
+  addDividerWall(-3, 'Z2Z3');
+
+  // ═══════════════════════════════════
+  //  3b-1. 中原精神序厅 (Zone 1)
+  // ═══════════════════════════════════
+  //  南侧入口区，z 范围：pz+3 ~ pz+9
+  //  中央：中原精神之树
+  //  南墙：主题文字 "人物铸丰碑 精神传中原"
+
+  const zone1Z = pz + pHalfD - 3;  // 序厅中心
+
+  // 主题墙（南墙）
+  const themeWallText = makeTextSprite(
+    '人物铸丰碑  精神传中原',
+    '中原红色人物精神展厅',
+  );
+  themeWallText.position.set(px, 3.2, pz + pHalfD - 1.0);
+  themeWallText.scale.set(8, 1.8, 1);
+  themeWallText.name = '主题墙文字';
+  scene.add(themeWallText);
+
+  // 南墙红绸装饰带
+  const redBanner = new THREE.Mesh(
+    new THREE.BoxGeometry(HALL_W - 0.5, 0.5, 0.08),
+    new THREE.MeshStandardMaterial({ color: 0x8b1a1a, roughness: 0.4, metalness: 0.3, emissive: 0x1a0000, emissiveIntensity: 0.3 }),
+  );
+  redBanner.position.set(px, 3.8, pz + pHalfD - 0.6);
+  redBanner.name = '南墙红绸';
+  scene.add(redBanner);
+
+  // 地面金色引导区（序厅→人物区过渡）
+  const zone1Floor = new THREE.Mesh(
+    new THREE.PlaneGeometry(HALL_W - 2, 4),
+    new THREE.MeshStandardMaterial({ color: 0x3a3038, roughness: 0.4, metalness: 0.08 }),
+  );
+  zone1Floor.rotation.x = -Math.PI / 2;
+  zone1Floor.position.set(px, 0.006, zone1Z);
+  zone1Floor.receiveShadow = true;
+  scene.add(zone1Floor);
+
+  // ═══════════════════════════════════
+  //  ★ 中原精神之树
+  // ═══════════════════════════════════
+  _buildSpiritTree(scene, px, zone1Z);
+
+  // ═══════════════════════════════════
+  //  3b-2. 红色人物展区 (Zone 2)
+  // ═══════════════════════════════════
+  //  z 范围：pz-3 ~ pz+3（中间 6m）
+  //  左侧：焦裕禄人物展示单元
+  //  右侧：红旗渠精神展示单元
+
+  const zone2Z = pz;
+
+  // —— 焦裕禄人物展示单元（左侧 X=-4 区域）——
+  _buildJiaoYuluUnit(scene, collidables, px - 4, zone2Z);
+
+  // —— 红旗渠精神展示单元（右侧 X=+4 区域）——
+  _buildHongqiquUnit(scene, collidables, px + 4, zone2Z);
+
+  // —— 中央过道铺地 ——
+  const zone2Floor = new THREE.Mesh(
+    new THREE.PlaneGeometry(1.5, 6),
+    new THREE.MeshStandardMaterial({ color: 0x4a3a3a, roughness: 0.3, metalness: 0.15 }),
+  );
+  zone2Floor.rotation.x = -Math.PI / 2;
+  zone2Floor.position.set(px, 0.006, zone2Z);
+  zone2Floor.receiveShadow = true;
+  scene.add(zone2Floor);
+
+  // ═══════════════════════════════════
+  //  3b-3. 精神传承展区 (Zone 3)
+  // ═══════════════════════════════════
+  //  z 范围：pz-9 ~ pz-3
+  //  中央：数字精神传承互动墙 + 出口
+
+  const zone3Z = pz - pHalfD + 3;
+
+  // 北墙主题文字
+  const futureText = makeTextSprite(
+    '从中原丰碑到时代担当',
+    '精神传承 · 清风永续',
+  );
+  futureText.position.set(px, 3.2, pz - pHalfD + 1.5);
+  futureText.scale.set(7, 1.6, 1);
+  futureText.name = '传承主题文字';
+  scene.add(futureText);
+
+  // 精神关键词发光柱（四根小柱排列在北墙前）
+  const keywords = ['亲民爱民', '艰苦奋斗', '科学求实', '无私奉献'];
+  for (let ki = 0; ki < keywords.length; ki++) {
+    const kCol = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.25, 0.28, 1.2, 12),
+      new THREE.MeshStandardMaterial({ color: 0x8b5543, roughness: 0.3, metalness: 0.4, emissive: 0x1a0a00, emissiveIntensity: 0.2 }),
+    );
+    kCol.position.set(px - 4.5 + ki * 3, 0.6, pz - pHalfD + 4);
+    kCol.castShadow = true;
+    kCol.receiveShadow = true;
+    kCol.name = `关键词柱-${keywords[ki]}`;
+    scene.add(kCol);
+
+    // 关键词标签
+    const kwSprite = makeTextSprite(keywords[ki], '');
+    kwSprite.position.set(px - 4.5 + ki * 3, 1.7, pz - pHalfD + 4);
+    kwSprite.scale.set(2.5, 0.7, 1);
+    scene.add(kwSprite);
+  }
+
+  // 出口门洞金色门框
+  const doorFrameL = new THREE.Mesh(
+    new THREE.BoxGeometry(0.15, HALL_H - 0.4, 0.25),
+    matGold,
+  );
+  doorFrameL.position.set(px - 2.15, HALL_H / 2, pz - pHalfD + WALL_T);
+  doorFrameL.name = '北门框-L';
+  scene.add(doorFrameL);
+
+  const doorFrameR = new THREE.Mesh(
+    new THREE.BoxGeometry(0.15, HALL_H - 0.4, 0.25),
+    matGold,
+  );
+  doorFrameR.position.set(px + 2.15, HALL_H / 2, pz - pHalfD + WALL_T);
+  doorFrameR.name = '北门框-R';
+  scene.add(doorFrameR);
 
   // ═══════════════════════════════════
   //  3c. 传承·见证致远（尾厅，北）
@@ -368,32 +531,29 @@ export function createExhibition() {
     }
   }
 
-  // 中央→人物 (南北方向) — 长度 8m (人物Z=6, 中央Z=-2, 人物南墙≈6+6=12, 中央南墙≈-2-6=-8...)
-  // 实际上人物北墙 = pz - HALL_D/2 = 6 - 6 = 0, 中央南墙 = cz - CENTER_W/2 = -2 - 6 = -8
-  // gap = 8m。这中间需要走廊墙。
-  // 连接人物北门 (px, pz - HALL_D/2) 到 中央南门 (cx, cz - CENTER_W/2)
-  const peopleNorthZ = pz - HALL_D / 2; // 0
-  const centralSouthZ = cz - CENTER_W / 2; // -8
+  // 人物馆北墙 → 中央大厅南墙 走廊 (人物Z=-1 到中央Z=-6，间距5m)
+  const peopleNorthZ = pz - PEOPLE_D / 2;
+  const centralSouthZ = cz - CENTER_W / 2;
   addCorridorWalls(px, peopleNorthZ + WALL_T, cx, centralSouthZ - WALL_T, CORRIDOR_W);
 
-  // 中央→传承 (南北) — 中央北墙 = cz + CENTER_W/2 = -2 + 6 = 4, 传承南墙 = fz + HALL_D/2 = -18 + 6 = -12
-  const centralNorthZ = cz + CENTER_W / 2; // 4
-  const futureSouthZ = fz + HALL_D / 2;   // -12
+  // 中央→传承 (南北)
+  const centralNorthZ = cz + CENTER_W / 2;
+  const futureSouthZ = fz + HALL_D / 2;
   addCorridorWalls(cx, centralNorthZ + WALL_T, fx, futureSouthZ - WALL_T, CORRIDOR_W);
 
-  // 中央→制度 (东西) — 中央西墙 = cx - CENTER_W/2 = -6, 制度东墙 = rx + HALL_W/2 = -16 + 7 = -9
-  const centralWestX = cx - CENTER_W / 2; // -6
-  const ruleEastX = rx + HALL_W / 2;      // -9
+  // 中央→制度 (东西)
+  const centralWestX = cx - CENTER_W / 2;
+  const ruleEastX = rx + HALL_W / 2;
   addCorridorWalls(centralWestX - WALL_T, cz, ruleEastX + WALL_T, rz, CORRIDOR_W);
 
-  // 中央→郑大 (东西) — 中央东墙 = cx + CENTER_W/2 = 6, 郑大西墙 = zx - HALL_W/2 = 16 - 7 = 9
-  const centralEastX = cx + CENTER_W / 2; // 6
-  const zzuWestX = zx - HALL_W / 2;      // 9
+  // 中央→郑大 (东西)
+  const centralEastX = cx + CENTER_W / 2;
+  const zzuWestX = zx - HALL_W / 2;
   addCorridorWalls(centralEastX + WALL_T, cz, zzuWestX - WALL_T, zz, CORRIDOR_W);
 
-  // 人物→序厅 走廊
-  const peopleSouthZ = pz + HALL_D / 2; // 12
-  const lobbyNorthZ = lz - LOBBY_D / 2; // 13
+  // 人物→序厅 走廊 (人物南墙Z=17 到序厅北墙Z=14，间距3m)
+  const peopleSouthZ = pz + PEOPLE_D / 2;
+  const lobbyNorthZ = lz - LOBBY_D / 2;
   addCorridorWalls(px, peopleSouthZ + WALL_T, lx, lobbyNorthZ - WALL_T, CORRIDOR_W);
 
   // ═══════════════════════════════════
@@ -431,7 +591,7 @@ export function createExhibition() {
 
   // 导览线路径
   addGuideLine(lx, lz - LOBBY_D / 2 + 1, lx, lz + LOBBY_D / 2 - 1); // 序厅南北
-  addGuideLine(px, pz - HALL_D / 2 + 0.5, px, pz + HALL_D / 2 - 0.5); // 人物馆南北
+  addGuideLine(px, pz - PEOPLE_D / 2 + 0.5, px, pz + PEOPLE_D / 2 - 0.5); // 人物馆 V2 南北（18m）
   addGuideLine(cx, cz - CENTER_W / 2 + 0.5, cx, cz + CENTER_W / 2 - 0.5); // 中央南北
   addGuideLine(fx, fz - HALL_D / 2 + 0.5, fx, fz + HALL_D / 2 - 0.5); // 传承南北
   addGuideLine(cx - CENTER_W / 2 + 0.5, cz, cx + CENTER_W / 2 - 0.5, cz); // 中央东西
@@ -621,7 +781,282 @@ export function addExhibitionLights(targetScene) {
 }
 
 // ═══════════════════════════════════════
-//  Canvas 纹理 → Sprite 标识牌
+//  PeopleHall 子构建函数
+// ═══════════════════════════════════════
+
+/**
+ * 中原精神之树 — 中央雕塑装置
+ * 树干 + 四根分支，代表焦裕禄精神、红旗渠精神、大别山精神、愚公移山精神
+ */
+function _buildSpiritTree(scene, tx, tz) {
+  const treeY = 0;
+
+  // 底座 — 八角形平台
+  const baseGeo = new THREE.CylinderGeometry(0.9, 1.0, 0.2, 8);
+  const base = new THREE.Mesh(baseGeo, matStone);
+  base.position.set(tx, 0.1, tz);
+  base.castShadow = true;
+  base.receiveShadow = true;
+  base.name = '精神树底座';
+  scene.add(base);
+
+  // 树干 — 红木色圆柱
+  const trunkGeo = new THREE.CylinderGeometry(0.15, 0.25, 2.8, 12);
+  const trunk = new THREE.Mesh(trunkGeo, matWood);
+  trunk.position.set(tx, 1.5, tz);
+  trunk.castShadow = true;
+  trunk.name = '精神树树干';
+  scene.add(trunk);
+
+  // 树冠 — 球形叶簇
+  const crownGeo = new THREE.SphereGeometry(0.7, 12, 10);
+  const crown = new THREE.Mesh(crownGeo, new THREE.MeshStandardMaterial({
+    color: 0x4a6b3a, roughness: 0.6, metalness: 0.05,
+  }));
+  crown.position.set(tx, 3.1, tz);
+  crown.name = '精神树冠';
+  scene.add(crown);
+
+  // 四根分支
+  const branchLabels = [
+    { text: '焦裕禄精神', angle: 0, color: 0xc9a96e },
+    { text: '红旗渠精神', angle: Math.PI / 2, color: 0x8faacc },
+    { text: '大别山精神', angle: Math.PI, color: 0xcc8f8f },
+    { text: '愚公移山精神', angle: -Math.PI / 2, color: 0x8fcc8f },
+  ];
+
+  for (const br of branchLabels) {
+    const bx = tx + Math.cos(br.angle) * 0.5;
+    const bz = tz + Math.sin(br.angle) * 0.5;
+
+    // 分支杆
+    const branchGeo = new THREE.CylinderGeometry(0.04, 0.06, 1.3, 8);
+    const branch = new THREE.Mesh(branchGeo, new THREE.MeshStandardMaterial({
+      color: br.color, roughness: 0.3, metalness: 0.6,
+    }));
+    branch.position.set(bx, 2.2, bz);
+    // 倾斜指向外侧
+    branch.rotation.z = Math.cos(br.angle) * 0.6;
+    branch.rotation.x = Math.sin(br.angle) * 0.6;
+    branch.name = `分支-${br.text}`;
+    scene.add(branch);
+
+    // 末端叶片球
+    const leafGeo = new THREE.SphereGeometry(0.15, 8, 6);
+    const leaf = new THREE.Mesh(leafGeo, new THREE.MeshStandardMaterial({
+      color: 0x5a8b4a, roughness: 0.5, metalness: 0.05,
+      emissive: 0x0a1a00, emissiveIntensity: 0.15,
+    }));
+    leaf.position.set(bx + Math.cos(br.angle) * 0.7, 2.6, bz + Math.sin(br.angle) * 0.7);
+    leaf.name = `叶片-${br.text}`;
+    scene.add(leaf);
+
+    // 标签精灵
+    const label = makeTextSprite(br.text, '');
+    label.position.set(bx + Math.cos(br.angle) * 1.3, 2.6, bz + Math.sin(br.angle) * 1.3);
+    label.scale.set(2.2, 0.5, 1);
+    scene.add(label);
+  }
+}
+
+/**
+ * 焦裕禄人物展示单元
+ * 包含：KT 立牌 + 档案台 + 展示屏 + 语录墙
+ */
+function _buildJiaoYuluUnit(scene, coll, ux, uz) {
+  const unitY = 0;
+
+  // —— 人形 KT 板（简化：深绿色矩形 + 人物轮廓） ——
+  const ktBaseGeo = new THREE.BoxGeometry(0.8, 2.2, 0.15);
+  const ktBase = new THREE.Mesh(ktBaseGeo, new THREE.MeshStandardMaterial({
+    color: 0x2a3a2a, roughness: 0.5, metalness: 0.05,
+  }));
+  ktBase.position.set(ux - 1.5, 1.1, uz);
+  ktBase.name = '焦裕禄-KT板';
+  ktBase.castShadow = true;
+  scene.add(ktBase);
+
+  // KT 板顶部红色标题条
+  const ktTitle = makeTextSprite('焦桐常青', '丰碑永驻');
+  ktTitle.position.set(ux - 1.5, 2.5, uz + 0.1);
+  ktTitle.scale.set(1.6, 0.5, 1);
+  scene.add(ktTitle);
+
+  // 语录条
+  const quote = makeTextSprite(
+    '"心中装着全体人民，唯独没有他自己"',
+    '—— 焦裕禄',
+  );
+  quote.position.set(ux - 1.5, 0.7, uz + 0.1);
+  quote.scale.set(3.5, 0.5, 1);
+  scene.add(quote);
+
+  // —— 档案展台 ——
+  const deskGeo = new THREE.BoxGeometry(1.5, 1.0, 1.0);
+  const desk = new THREE.Mesh(deskGeo, matWood);
+  desk.position.set(ux + 0.5, 0.5, uz - 1);
+  desk.castShadow = true;
+  desk.receiveShadow = true;
+  desk.name = '焦裕禄-档案展台';
+  scene.add(desk);
+  coll.push(desk);
+
+  // 展台上方玻璃展柜
+  const glassGeo = new THREE.BoxGeometry(1.3, 0.6, 0.8);
+  const glassCase = new THREE.Mesh(glassGeo, matGlass);
+  glassCase.position.set(ux + 0.5, 1.3, uz - 1);
+  glassCase.name = '焦裕禄-玻璃展柜';
+  scene.add(glassCase);
+  coll.push(glassCase);
+
+  // 展台标签
+  const deskLabel = makeTextSprite('干部十不准', '廉洁奉公档案');
+  deskLabel.position.set(ux + 0.5, 1.9, uz - 0.5);
+  deskLabel.scale.set(2.2, 0.6, 1);
+  scene.add(deskLabel);
+
+  // —— 展示屏（发光平面） ——
+  const screenGeo = new THREE.PlaneGeometry(1.8, 1.2);
+  const screen = new THREE.Mesh(screenGeo, new THREE.MeshBasicMaterial({
+    color: 0xeeddcc,
+    // 后续可替换为实际图片纹理
+  }));
+  screen.position.set(ux + 0.5, 1.6, uz + 1.2);
+  screen.name = '焦裕禄-展示屏';
+  scene.add(screen);
+
+  // 屏幕边框
+  const screenFrame = new THREE.Mesh(
+    new THREE.BoxGeometry(2.0, 1.4, 0.05),
+    matDarkMetal,
+  );
+  screenFrame.position.set(ux + 0.5, 1.6, uz + 1.15);
+  screenFrame.name = '展示屏边框';
+  scene.add(screenFrame);
+
+  // 屏幕标签
+  const screenLabel = makeTextSprite('兰考治沙故事', '影像档案');
+  screenLabel.position.set(ux + 0.5, 0.6, uz + 1.2);
+  screenLabel.scale.set(2.5, 0.5, 1);
+  scene.add(screenLabel);
+}
+
+/**
+ * 红旗渠精神展示单元
+ * 岩壁背景 + 蓝色水流 + 精神关键词
+ */
+function _buildHongqiquUnit(scene, coll, ux, uz) {
+  // —— 太行山岩壁（不规则块体模拟） ——
+  const rockMat = new THREE.MeshStandardMaterial({
+    color: 0x6b5a4a, roughness: 0.85, metalness: 0.02,
+  });
+
+  for (let ri = 0; ri < 5; ri++) {
+    const rw = 0.8 + Math.random() * 1.2;
+    const rh = 1.5 + Math.random() * 1.5;
+    const rx = ux + 1.5 + (ri - 2) * 0.7;
+    const rz = uz - 0.5 + (ri % 2) * 0.5;
+    const rock = new THREE.Mesh(
+      new THREE.BoxGeometry(rw, rh, 0.3),
+      rockMat,
+    );
+    rock.position.set(rx, rh / 2, rz);
+    rock.castShadow = true;
+    rock.receiveShadow = true;
+    rock.rotation.y = (Math.random() - 0.5) * 0.3;
+    rock.name = `岩壁-${ri}`;
+    scene.add(rock);
+  }
+
+  // —— 蓝色水流（发光平面） ——
+  const waterGeo = new THREE.PlaneGeometry(2.5, 0.6);
+  const waterMat = new THREE.MeshStandardMaterial({
+    color: 0x4488cc,
+    roughness: 0.2,
+    metalness: 0.3,
+    emissive: 0x112244,
+    emissiveIntensity: 0.4,
+  });
+  const water = new THREE.Mesh(waterGeo, waterMat);
+  water.position.set(ux + 1.5, 0.8, uz + 1.0);
+  water.name = '红旗渠水流';
+  scene.add(water);
+
+  // 水流上方标签
+  const hqLabel = makeTextSprite('自力更生  艰苦创业', '团结协作  无私奉献');
+  hqLabel.position.set(ux + 1.5, 1.6, uz + 1.0);
+  hqLabel.scale.set(4, 0.6, 1);
+  scene.add(hqLabel);
+
+  // —— 标识牌 ——
+  const hqTitle = makeTextSprite('红旗渠精神', '太行山上的廉洁丰碑');
+  hqTitle.position.set(ux + 1.5, 2.6, uz - 1.0);
+  hqTitle.scale.set(3, 0.7, 1);
+  scene.add(hqTitle);
+
+  // 小型展台
+  const hqPedestal = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.35, 0.4, 0.8, 12),
+    matStone,
+  );
+  hqPedestal.position.set(ux + 1.5, 0.4, uz - 1.2);
+  hqPedestal.castShadow = true;
+  hqPedestal.receiveShadow = true;
+  hqPedestal.name = '红旗渠展台';
+  scene.add(hqPedestal);
+  coll.push(hqPedestal);
+}
+
+/**
+ * 生成文字精灵（Canvas 纹理）
+ * @param {string} line1 — 第一行
+ * @param {string} line2 — 第二行（可选）
+ * @returns {THREE.Sprite}
+ */
+function makeTextSprite(line1, line2) {
+  const w = 1024, h = line2 ? 320 : 200;
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+
+  if (line2) {
+    ctx.fillStyle = 'rgba(0,0,0,0)';
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = '#e8d5b0';
+    ctx.font = 'bold 48px "Microsoft YaHei","PingFang SC",sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(line1, w / 2, h * 0.38);
+    ctx.fillStyle = '#9a8a6a';
+    ctx.font = '34px "Microsoft YaHei","PingFang SC",sans-serif';
+    ctx.fillText(line2, w / 2, h * 0.72);
+  } else {
+    ctx.fillStyle = 'rgba(0,0,0,0)';
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = '#e8d5b0';
+    ctx.font = 'bold 42px "Microsoft YaHei","PingFang SC",sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(line1, w / 2, h / 2);
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.premultiplyAlpha = true;
+
+  const mat = new THREE.SpriteMaterial({
+    map: texture,
+    transparent: true,
+    depthWrite: false,
+  });
+  return new THREE.Sprite(mat);
+}
+
+// ═══════════════════════════════════════
+//  Canvas 纹理 → Sprite 标识牌（展厅门楣用）
 // ═══════════════════════════════════════
 
 function makeSignSprite(title, subtitle) {

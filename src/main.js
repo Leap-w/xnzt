@@ -81,7 +81,7 @@ const {
 
 const BUILDING_BOUNDS = {
   xMin: -23, xMax: 23,
-  zMin: -22, zMax: 24,
+  zMin: -24, zMax: 27,
 };
 
 // ═══════════════════════════════════════
