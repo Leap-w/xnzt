@@ -322,20 +322,8 @@ export function createExhibition() {
     }
   }
 
-  // Zone 1｜2 分隔：pz + pHalfD - 6 = pz + 3  (Zone1 深6m)
-  // Zone 2｜3 分隔：pz - pHalfD + 6 = pz - 3  (Zone3 深6m)
+  // Zone1(南,pz+9~pz+3) | Zone2(中,pz+3~pz-3) | Zone3(北,pz-3~pz-9)
   addDividerWall(3, 'Z1Z2');
-  // Zone 2 is the middle, Zone 3 is at north end
-  // Actually let me recalculate:
-  // Zone 1: pz + pHalfD to pz + pHalfD - 6 → Z1 south wall at pz+9, Z1 north wall at pz+3
-  // Zone 2: pz + 3 to pz - 3 (middle 6m)
-  // Zone 3: pz - 3 to pz - pHalfD → Z3 south wall at pz-3, Z3 north wall at pz-9
-  // Divider 1 at pz+3 (between Z1/Z2)
-  // Divider 2 at pz-3 (between Z2/Z3)
-
-  // Divider at pz+3 (between Zone 1 and Zone 2)
-  addDividerWall(3, 'Z1Z2');
-  // Divider at pz-3 (between Zone 2 and Zone 3)
   addDividerWall(-3, 'Z2Z3');
 
   // ═══════════════════════════════════
