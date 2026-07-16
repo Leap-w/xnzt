@@ -324,7 +324,7 @@ export function createExhibition() {
 
   // Zone 1｜2 分隔：pz + pHalfD - 6 = pz + 3  (Zone1 深6m)
   // Zone 2｜3 分隔：pz - pHalfD + 6 = pz - 3  (Zone3 深6m)
-  addDividerWall(pH - 3, 'Z1Z2');
+  addDividerWall(3, 'Z1Z2');
   // Zone 2 is the middle, Zone 3 is at north end
   // Actually let me recalculate:
   // Zone 1: pz + pHalfD to pz + pHalfD - 6 → Z1 south wall at pz+9, Z1 north wall at pz+3
