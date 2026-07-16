@@ -1,0 +1,33 @@
+{
+  "name": "lianhua-zhengfang-exhibition",
+  "version": "1.0.0",
+  "description": "《廉花郑放·赓续清风——红色廉洁文化档案展》3D虚拟展厅",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy": "npm run build && npx gh-pages -d dist -b gh-pages"
+  },
+  "dependencies": {
+    "three": "^0.170.0"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
+  },
+  "homepage": "https://github.com/你的用户名/lianhua-zhengfang-exhibition#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/你的用户名/lianhua-zhengfang-exhibition.git"
+  },
+  "keywords": [
+    "threejs",
+    "3d-exhibition",
+    "virtual-museum",
+    "廉洁文化",
+    "红色文化",
+    "digital-archive"
+  ],
+  "author": "",
+  "license": "MIT"
+}

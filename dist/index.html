@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>廉花郑放·赓续清风 — 红色廉洁文化档案展</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+      background: #0d0d1a;
+      touch-action: none;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    #app { width: 100%; height: 100%; }
+
+    /* ═══════════════════════════════════
+       加载遮罩
+       ═══════════════════════════════════ */
+    #loading-overlay {
+      position: fixed; inset: 0; z-index: 200;
+      background: radial-gradient(ellipse at center, #1a1a2e 0%, #0d0d1a 70%);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      transition: opacity 0.6s ease;
+      pointer-events: all;
+    }
+    #loading-overlay.hidden { opacity: 0; pointer-events: none; }
+
+    .loading-title {
+      font-size: 1.6rem; color: #c9a96e;
+      letter-spacing: 0.2em; margin-bottom: 8px;
+      text-shadow: 0 0 30px rgba(201,169,110,0.35);
+    }
+    .loading-subtitle {
+      font-size: 0.85rem; color: #7a6a5a;
+      letter-spacing: 0.12em; margin-bottom: 40px;
+    }
+    .loading-spinner {
+      width: 40px; height: 40px;
+      border: 2px solid rgba(201,169,110,0.2);
+      border-top-color: #c9a96e; border-radius: 50%;
+      animation: spin 1s linear infinite; margin-bottom: 28px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .progress-wrap {
+      width: 260px; height: 3px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 2px; overflow: hidden; margin-bottom: 10px;
+    }
+    .progress-fill {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, #8b5a3a, #c9a96e, #e0c080);
+      border-radius: 2px; transition: width 0.15s ease;
+    }
+    .progress-text {
+      font-size: 0.82rem; color: #8a7a6a;
+      letter-spacing: 0.08em;
+      font-family: "Consolas", "Courier New", monospace;
+      min-width: 48px; text-align: center;
+    }
+    .loading-error {
+      margin-top: 20px; padding: 10px 20px;
+      background: rgba(200,60,40,0.15);
+      border: 1px solid rgba(200,80,60,0.4);
+      border-radius: 6px; color: #d08070;
+      font-size: 0.8rem; letter-spacing: 0.06em;
+      display: none; max-width: 360px;
+      text-align: center; line-height: 1.5;
+    }
+    .loading-error.show { display: block; }
+    .loading-error.retry {
+      margin-top: 14px; padding: 6px 18px;
+      background: rgba(201,169,110,0.15);
+      border: 1px solid rgba(201,169,110,0.4);
+      color: #c9a96e; cursor: pointer;
+      pointer-events: all; font-size: 0.78rem;
+    }
+
+    /* ═══════════════════════════════════
+       开场字幕
+       ═══════════════════════════════════ */
+    #cinematic-overlay {
+      position: fixed; bottom: 20%; left: 50%;
+      transform: translateX(-50%);
+      z-index: 60; pointer-events: none;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 8px;
+    }
+    #cinematic-title {
+      font-size: 1.8rem; color: #e8d5b0;
+      letter-spacing: 0.25em;
+      text-shadow: 0 0 40px rgba(201,169,110,0.4), 0 2px 8px rgba(0,0,0,0.7);
+      opacity: 0; transition: opacity 0.8s ease;
+    }
+    #cinematic-title.visible { opacity: 1; }
+    #cinematic-subtitle {
+      font-size: 1rem; color: #b0a080;
+      letter-spacing: 0.15em;
+      text-shadow: 0 0 20px rgba(201,169,110,0.3), 0 1px 4px rgba(0,0,0,0.6);
+      opacity: 0; transition: opacity 0.8s ease;
+    }
+    #cinematic-subtitle.visible { opacity: 1; }
+
+    /* ═══════════════════════════════════
+       操作提示（左下角）
+       ═══════════════════════════════════ */
+    #control-hint {
+      position: fixed; bottom: 20px; left: 16px;
+      z-index: 15; pointer-events: none;
+      color: #888;
+      font-size: 0.7rem;
+      background: rgba(0,0,0,0.55);
+      padding: 8px 14px;
+      border-radius: 8px;
+      letter-spacing: 0.05em;
+      line-height: 1.6;
+      opacity: 0; transition: opacity 0.6s;
+      border: 1px solid rgba(201,169,110,0.15);
+    }
+    #control-hint.visible { opacity: 1; }
+    .key-row { display: flex; align-items: center; gap: 6px; }
+    .key { color: #c9a96e; font-weight: 600; }
+
+    /* ═══════════════════════════════════
+       音频按钮
+       ═══════════════════════════════════ */
+    #audio-btn {
+      position: fixed; top: 12px; left: 16px;
+      z-index: 20;
+      width: 36px; height: 36px; border-radius: 50%;
+      background: rgba(0,0,0,0.55);
+      border: 1px solid rgba(201,169,110,0.35);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; transition: all 0.2s; user-select: none;
+    }
+    #audio-btn:hover {
+      background: rgba(201,169,110,0.2);
+      border-color: rgba(201,169,110,0.6);
+    }
+    #audio-btn.muted { opacity: 0.5; }
+    #audio-icon { pointer-events: none; }
+
+    /* ═══════════════════════════════════
+       FPS（音频按钮旁边）
+       ═══════════════════════════════════ */
+    #fps {
+      position: fixed; top: 12px; left: 60px;
+      font-size: 0.72rem;
+      font-family: "Consolas", "Courier New", monospace;
+      color: #8f8;
+      background: rgba(0,0,0,0.55);
+      padding: 4px 10px; border-radius: 6px;
+      z-index: 10; pointer-events: none;
+      letter-spacing: 0.04em;
+    }
+
+    /* ═══════════════════════════════════
+       小地图（右上角）
+       ═══════════════════════════════════ */
+    #minimap-wrap {
+      position: fixed; top: 10px; right: 12px;
+      z-index: 15;
+      opacity: 0.85;
+      display: none;
+    }
+
+    /* ═══════════════════════════════════
+       交互提示（准星下方）
+       ═══════════════════════════════════ */
+    #interact-hint {
+      position: fixed;
+      transform: translate(-50%, -50%);
+      color: #e8d5b0;
+      font-size: 0.85rem;
+      background: rgba(0,0,0,0.7);
+      padding: 6px 16px;
+      border-radius: 6px;
+      border: 1px solid rgba(201,169,110,0.45);
+      z-index: 30; pointer-events: none;
+      letter-spacing: 0.08em;
+      opacity: 0;
+      transition: opacity 0.25s;
+      white-space: nowrap;
+      text-shadow: 0 0 8px rgba(201,169,110,0.3);
+    }
+    #interact-hint.visible { opacity: 1; }
+
+    .hint-dot {
+      display: inline-block;
+      width: 6px; height: 6px;
+      background: #c9a96e;
+      border-radius: 50%;
+      margin-right: 6px;
+      vertical-align: middle;
+      animation: hintPulse 1.2s ease-in-out infinite;
+    }
+    @keyframes hintPulse {
+      0%, 100% { opacity: 0.4; transform: scale(0.8); }
+      50% { opacity: 1; transform: scale(1.3); }
+    }
+
+    /* ═══════════════════════════════════
+       锁定提示
+       ═══════════════════════════════════ */
+    #lock-hint {
+      position: fixed; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      color: #fff; font-size: 0.95rem;
+      background: rgba(0,0,0,0.7);
+      padding: 12px 28px; border-radius: 8px;
+      z-index: 50; pointer-events: none;
+      transition: opacity 0.3s;
+      letter-spacing: 0.08em;
+      opacity: 0;
+    }
+
+    /* ═══════════════════════════════════
+       移动端虚拟摇杆
+       ═══════════════════════════════════ */
+    .joystick-base {
+      position: fixed; z-index: 40;
+      width: 120px; height: 120px;
+      border-radius: 50%;
+      background: rgba(201,169,110,0.12);
+      border: 1.5px solid rgba(201,169,110,0.3);
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .touch-device .joystick-base.active { opacity: 1; }
+
+    .joystick-thumb {
+      position: absolute; top: 50%; left: 50%;
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: rgba(201,169,110,0.35);
+      border: 1.5px solid rgba(201,169,110,0.6);
+      transform: translate(-50%, -50%);
+    }
+
+    .look-hint {
+      position: fixed; right: 30px; top: 50%;
+      transform: translateY(-50%);
+      color: rgba(200,180,150,0.5);
+      font-size: 0.78rem;
+      letter-spacing: 0.08em;
+      z-index: 25;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .touch-device .look-hint { opacity: 1; }
+
+    /* ═══════════════════════════════════
+       展品弹窗（CSS 同之前，精简保留）
+       ═══════════════════════════════════ */
+    #exhibit-popup-overlay {
+      position: fixed; inset: 0; z-index: 300;
+      background: rgba(0,0,0,0.7);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.35s ease;
+      backdrop-filter: blur(3px);
+    }
+    #exhibit-popup-overlay.visible { opacity: 1; pointer-events: all; }
+
+    .popup-card {
+      position: relative;
+      width: min(720px, 94vw); max-height: 90vh;
+      background: linear-gradient(160deg, #1e1a28 0%, #1a1420 100%);
+      border: 1px solid rgba(201,169,110,0.35);
+      border-radius: 14px;
+      box-shadow: 0 0 60px rgba(0,0,0,0.6), 0 0 80px rgba(201,169,110,0.08);
+      overflow: hidden; display: flex; flex-direction: column;
+      animation: cardIn 0.35s ease;
+    }
+    @keyframes cardIn {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .popup-close {
+      position: absolute; top: 12px; right: 14px; z-index: 5;
+      width: 32px; height: 32px; border-radius: 50%;
+      border: 1px solid rgba(201,169,110,0.3);
+      background: rgba(0,0,0,0.5);
+      color: #c9a96e; font-size: 1rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s; line-height: 1;
+    }
+    .popup-close:hover {
+      background: rgba(200,60,40,0.3); border-color: rgba(200,80,60,0.6); color: #e08070;
+    }
+    .popup-header {
+      padding: 28px 32px 16px;
+      border-bottom: 1px solid rgba(201,169,110,0.15);
+    }
+    .popup-type-badge {
+      display: inline-block;
+      font-size: 0.72rem; color: #c9a96e;
+      background: rgba(201,169,110,0.1);
+      padding: 3px 12px; border-radius: 12px;
+      margin-bottom: 10px; letter-spacing: 0.06em;
+    }
+    .popup-title {
+      font-size: 1.5rem; color: #e8d5b0; font-weight: 700;
+      letter-spacing: 0.08em; margin-bottom: 4px;
+    }
+    .popup-subtitle { font-size: 0.9rem; color: #9a8a6a; margin-bottom: 4px; letter-spacing: 0.05em; }
+    .popup-year { font-size: 0.85rem; color: #8a7a6a; letter-spacing: 0.06em; }
+
+    .popup-media { position: relative; background: #0d0a14; min-height: 80px; }
+    .popup-image-wrap {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 200px; max-height: 360px;
+      background: #0d0a14; position: relative;
+    }
+    .popup-image-wrap img { max-width: 100%; max-height: 360px; object-fit: contain; display: block; }
+    .popup-video-wrap { position: relative; padding-top: 56.25%; }
+    .popup-video-wrap iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: none; }
+    .popup-image-nav {
+      position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+      display: flex; align-items: center; gap: 14px;
+      background: rgba(0,0,0,0.6); padding: 4px 14px; border-radius: 14px;
+    }
+    .img-nav-btn {
+      width: 26px; height: 26px; border-radius: 50%;
+      border: 1px solid rgba(201,169,110,0.3);
+      background: rgba(0,0,0,0.4); color: #c9a96e;
+      font-size: 0.7rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+    }
+    .img-nav-btn:hover { background: rgba(201,169,110,0.2); border-color: rgba(201,169,110,0.6); }
+    .img-nav-info { font-size: 0.72rem; color: #9a8a6a; letter-spacing: 0.05em; min-width: 40px; text-align: center; }
+
+    .popup-body {
+      padding: 20px 32px 32px; overflow-y: auto; flex: 1;
+      color: #b0a090; font-size: 0.88rem; line-height: 1.85; letter-spacing: 0.04em;
+    }
+    .popup-body::-webkit-scrollbar { width: 5px; }
+    .popup-body::-webkit-scrollbar-track { background: transparent; }
+    .popup-body::-webkit-scrollbar-thumb { background: rgba(201,169,110,0.2); border-radius: 3px; }
+
+    .popup-intro { color: #c0b0a0; font-size: 0.92rem; line-height: 1.9; margin-bottom: 18px; text-indent: 2em; }
+    .popup-highlight {
+      margin: 20px 0 22px; padding: 14px 18px 14px 44px;
+      background: rgba(201,169,110,0.06); border-left: 3px solid rgba(201,169,110,0.5);
+      border-radius: 0 8px 8px 0; position: relative;
+    }
+    .highlight-mark { position: absolute; left: 10px; top: 6px; font-size: 1.5rem; color: rgba(201,169,110,0.45); line-height: 1; pointer-events: none; }
+    .popup-highlight p { color: #d4c0a0; font-size: 0.92rem; font-weight: 600; line-height: 1.8; margin: 0; letter-spacing: 0.05em; }
+    .popup-section { margin-bottom: 20px; }
+    .section-heading {
+      font-size: 0.92rem; color: #c9a96e; font-weight: 700;
+      margin-bottom: 8px; padding-bottom: 6px;
+      border-bottom: 1px solid rgba(201,169,110,0.12); letter-spacing: 0.07em;
+    }
+    .section-para { margin-bottom: 10px; line-height: 1.85; }
+    .section-para:last-child { margin-bottom: 0; }
+    .story-label { display: inline; color: #e0c080; font-weight: 700; letter-spacing: 0.05em; margin-right: 2px; }
+
+    .popup-footer { padding: 12px 32px; border-top: 1px solid rgba(201,169,110,0.1); text-align: center; }
+    .popup-hint { font-size: 0.72rem; color: #5a4a3a; letter-spacing: 0.06em; }
+
+    /* ═══════════════════════════════════
+       响应式
+       ═══════════════════════════════════ */
+    @media (max-width: 768px) {
+      #control-hint { bottom: 100px; font-size: 0.65rem; padding: 6px 10px; }
+      #minimap-wrap { top: auto; bottom: 90px; right: 8px; }
+      .popup-card { width: 96vw; max-height: 80vh; border-radius: 10px; }
+      .popup-header { padding: 18px 18px 12px; }
+      .popup-body { padding: 14px 18px 24px; font-size: 0.82rem; }
+      .popup-title { font-size: 1.2rem; }
+    }
+  </style>
+  <script type="module" crossorigin src="/xnzt/assets/index-D2WCxERs.js"></script>
+</head>
+<body>
+  <div id="app"></div>
+
+  <!-- 加载画面 -->
+  <div id="loading-overlay">
+    <div class="loading-title">廉花郑放 · 赓续清风</div>
+    <div class="loading-subtitle">红色廉洁文化档案展</div>
+    <div class="loading-spinner" id="load-spinner"></div>
+    <div class="progress-wrap">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+    <div class="progress-text" id="progress-text">准备中…</div>
+    <div class="loading-error" id="load-error"></div>
+    <button class="loading-error retry" id="load-retry" onclick="location.reload()">🔄 重新加载</button>
+  </div>
+
+  <!-- 开场字幕 -->
+  <div id="cinematic-overlay">
+    <div id="cinematic-title"></div>
+    <div id="cinematic-subtitle"></div>
+  </div>
+
+  <!-- HUD -->
+  <div id="audio-btn" title="静音切换 (M)">
+    <span id="audio-icon">🔊</span>
+  </div>
+  <div id="fps">-- FPS</div>
+  <div id="lock-hint">🖱️ 点击画面开始漫游</div>
+  <div id="control-hint">
+    <div class="key-row"><span class="key">W A S D</span> 移动</div>
+    <div class="key-row"><span class="key">鼠标</span> 旋转视角</div>
+    <div class="key-row"><span class="key">滚轮</span> 缩放</div>
+    <div class="key-row"><span class="key">M</span> 静音切换</div>
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,14 @@
+node_modules/
+.DS_Store
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# 大模型文件
+public/models/*.glb
+
+# 参考素材（太大，不入库）
+参考文件/
+0参考文件/
